@@ -1,0 +1,20 @@
+{
+    "name": "saaiph/router",
+    "description": "Core the Route",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Daniel Souza",
+            "email": "danieljuniorce@hotmail.com"
+        }
+    ],
+    "minimum-stability": "dev",
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "Saaiph\\Router\\": "src/",
+            "Saaiph\\Router\\Method\\": "src/Method/"
+        }
+    }
+}
