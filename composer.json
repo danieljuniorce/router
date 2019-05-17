@@ -2,6 +2,7 @@
     "name": "saaiph/router",
     "description": "Core the Route",
     "type": "library",
+    "version": "1.0",
     "license": "MIT",
     "authors": [
         {
@@ -10,7 +11,10 @@
         }
     ],
     "minimum-stability": "dev",
-    "require": {},
+    "prefer-stable": true,
+    "require": {
+        "php": ">=7.1"
+    },
     "autoload": {
         "psr-4": {
             "Saaiph\\Router\\": "src/",
