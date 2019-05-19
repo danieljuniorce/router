@@ -39,10 +39,10 @@ $ composer install
 
     //$filename é o local onde vai ficar armazenado os verbos usados no http padrão, GET, POST, PUT e Delete;
     //$namespaceController argumentos opcional, se for usar controllers no seus projeto é necessário colocar o namespace inicial onde ficarar armazenado o seus controllers;
-    $router = new Router($filename, $namespaceController);
+    $router = new Router($filename, true or false, $namespace_controller);
 
     //Exemplo de uso
-    $router = new Router(__DIR__."/router/web.php", "\Controllers\\");
+    $router = new Router(__DIR__."/router/web.php", true, "\Controllers\\");
 ```
 
 ### Estrutura do arquivo web.php (ou outros)

@@ -1,140 +1,112 @@
 <?php
 namespace Saaiph\Router;
 
-use Saaiph\Router\Method\Method;
-
 class Router extends Method
 {
-    //Leitura o filename
-    private static $filename;
+    //Namespace dos controllers
+    private static $namespaceController;
 
-    //argumentos passado pela args
-    private static $args;
+    //HTTP
+    protected static $http;
 
-    //prefix do namespace para leitura dos controllers
-    private static $namespaceControlles;
-
-    /*
-    * @param $filename incluar o diretório relacionado a o diretório!
-    * @param $namespaceControlles é optional, relacionado a leitura ao namespace dos controllers baseado no namespace com autoload em PSR-4
-    */
-    public function __construct($filename, $namespaceControlles = '')
+    public function __construct(string $router_file, bool $use_controller = false, string $namespace_controller = '')
     {
-        self::$filename = $filename;
-        self::$namespaceControlles = $namespaceControlles;
-    }
-    
-    public static function load()
-    {
-        self::read_file(self::$filename);
-        self::struct();
+        $this->read_file($router_file);
+        $this->use_controller($use_controller, $namespace_controller);
+        $this->struct_router();
     }
 
-    /*
-    *----------------------------------------------
-    *
-    *   Leitura do arquivo onde irá fica armazenado
-    *   as routas;
-    *   @param $filename obrigatório
-    *----------------------------------------------
-    */
-    private static function read_file($filename)
+    //Read file router
+    private function read_file($filename)
     {
         if (file_exists($filename)) {
-            require($filename);
+
+            require $filename;
+
         } else {
-            new \ErrorException("Nome do arquivo/diretório está errado ou não existe.");
+            throw new \Exception("File not found");
         }
     }
 
-    /*
-    *----------------------------------------------
-    *
-    * Estrutura de leitura das rotas baseadas url
-    *
-    *----------------------------------------------
-    */
-    private static function struct()
+    //Verificação da utilização do controller
+    private function use_controller($verify, $namespaceController)
     {
-        //Armazenamento da url
-        $url = explode("index.php", $_SERVER['PHP_SELF']);
+        if ($verify === true) {
+
+            if (is_string($namespaceController) && !empty($namespaceController)) {
+                self::$namespaceController = $namespaceController;
+            } else {
+                throw new \Exception("Necessário a inserção do namespace, a o declara true no construct do Router.");
+            }
+        }
+    }
+
+    private function struct_router()
+    {
+        $url = \explode("index.php", $_SERVER['PHP_SELF']);
         $url = end($url);
 
-        //Array para armazena o pattern com a url e paramentros e struct do method requerido;
-        $type = [];
-        switch ($_SERVER['REQUEST_METHOD']) {
-            case "GET":
-                $type = self::$get;
+        switch ($_SERVER["REQUEST_METHOD"]) {
+            case 'GET':
+                default:
+                    self::$http = self::$get;
                 break;
-            case "POST":
-                $type = self::$post;
+            case 'POST':
+                    self::$http = self::$post;
                 break;
-            case "PUT":
-                $type = self::$put;
+            case 'PUT':
+                    self::$http = self::$put;
                 break;
-            case "DELETE":
-                $type = self::$delete;
+            case 'DELETE':
+                    self::$http = self::$delete;
                 break;
         }
-        
-        //Estrutura baseado
-        foreach ($type as $pt => $struct) {
-            $pattern = preg_replace('(\{[a-z0-9]{0,}\})', '([a-z0-9]{0,})', $pt);
 
-            if (preg_match('#^('.$pattern.')*$#i', $url, $matches) === 1) {
-                array_shift($matches);
-                array_shift($matches);
+        if (self::$http !== null) {
 
-                $itens = [];
-                if (preg_match_all('(\{[a-z0-9]{0,}\})', $pt, $m)) {
-                    $itens = \preg_replace('(\{|\})', '', $m[0]);
-                }
-                
-                $args = [];
-                foreach ($matches as $key => $value) {
-                    $args[$itens[$key]] = $value;
+            //Estrutura de leitura da routas
+            foreach (self::$http as $pt => $struct) {
+
+                $pattern = \preg_replace('(\{[a-z0-9]{0,}\})', '([a-z0-9]{0,})', $pt);
+
+                if (preg_match('#^('.$pattern.')*$#i', $url, $matches) === 1) {
+                    array_shift($matches);
+                    array_shift($matches);
+
+                    $itens = [];
+                    if (preg_match_all('(\{[a-z0-9]{0,}\})', $pt, $m)) {
+
+                        $itens = \preg_replace('(\{|\})', '', $m[0]);
+                    }
+                    
+                    $arg = [];
+                    foreach ($matches as $key => $match) {
+                        $arg[$itens[$key]] = $match;
+                    }
+
+                    $this->instance_router($struct, $arg);
+                    break;
                 }
             }
-            self::$args = $args;
-            self::instace($struct);           
-            break;
+
+        } else {
+            throw new \Exception("Rout not found");
         }
     }
 
-    private static function instace($struct)
+    private function instance_router($struct, $arg)
     {
-        $args = self::filter_arg();
+        if (is_string($struct)) {
 
-        /*
-            verificação usada ser for passa uma string com @ com nome do controller e a função
-        */
-        if (is_string($struct) && strstr($struct, "@")) {
-            $struct = explode("@", $struct);
+            $controllerAndAction = explode("@", $struct);
 
-            $controller = self::$namespaceControlles.$struct[0];
-            $action = $struct[1];
+            $controller = self::$namespaceController.$controllerAndAction[0];
+            $action = $controllerAndAction[1];
 
-            return \call_user_func_array([new $controller(), $action], $args);
+            \call_user_func_array([new $controller(), $action], $arg);
 
-        } 
-        /*
-            verificação usa para executar quando for passado no struct uma função;
-        */
-        else if (is_callable($struct)) {
-
-            return $struct($args);
-        } else {
-            self::error404(function () {
-                echo "Router not found!";
-            });
-        }
-    }
-    private static function filter_arg()
-    {
-        if (\count(self::$args)) {
-            return self::$args;
-        } else {
-            return [];
+        } else if (is_callable($struct)) {
+            $struct($arg);
         }
     }
 }
